@@ -1,20 +1,26 @@
 %Lectura de datos:
 int: n;
 int: m;
-int: ct;
-int: maxM;
 array[1..m] of int: p;
 array[1..m] of float: ext;
-array[1..m] of int: ce;
-array[1..m,1..m] of int: c;
+array[1..m] of float: ce;
+array[1..m,1..m] of float: c;
+float: ct;
+int: maxM;
 
 %Variables:
 array[1..m,1..m] of var 0..n: x;
+array [1..m] of var 0..n: sol;
+var float: extremismo;
 
 %Restricciones:
 constraint forall(i in 1..m, j in 1..m)(x[i,j] >= 0);
 constraint sum(i in 1..m)(sum(j in 1..m)( (j - i)* x[i,j] )) <= maxM;
 constraint forall(i in 1..m)(sum(j in 1..m)(x[i,j]) <= p[i]);
+constraint forall(i in 1..m, j in 1..m where i==j)( x[i,j] = 0);
+constraint forall(i in 1..m)(
+  sol[i]=p[i] - sum(k in 1..i, j in 1..m)(x[k,j]) + sum(k in 1..m, j in 1..i)(x[k,j])
+);
 var float: total_cost;
 
 constraint
@@ -28,9 +34,8 @@ constraint
 
 constraint total_cost <= ct;
 
-
+%constraint extremismo = sum(i in 1..m) (p[i] - sum(j in 1..m where i!=j)(x[i,j] )*ext[i] );
+constraint extremismo = sum(i in 1..m) (sol[i] *ext[i]);
 
 %Objetivo
-var float: extremismo;
-constraint extremismo = sum(i in 1..m) (p[i] - sum(j in 1..m)(x[i,j])*ext[i] );
 solve minimize extremismo;
