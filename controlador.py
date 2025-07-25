@@ -1,8 +1,12 @@
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, font
 import tkinter as tk
 import minizinc
 import os
 import glob
+import re
+import ast
+
+global n, m, p, ext, ce, c, ct, maxM
 
 def encontrar_gurobi():
   """Encuentra automáticamente la instalación de Gurobi en el sistema"""
@@ -48,8 +52,7 @@ def configurar_gurobi():
   print(f"Gurobi configurado en: {gurobi_home}")
   return True
 
-def cargar_archivo(archivo_seleccionado, ventana_entrada):
-  global datos
+def cargar_archivo(archivo_seleccionado, valorN_var, valorM_var, valorP, valorExt, valorCe, valorCij, valorCt_var, valorMaxM_var):
   archivo = filedialog.askopenfilename(
     title="Seleccionar archivo",
     filetypes=[("Archivos de texto", "*.txt")]
@@ -57,8 +60,7 @@ def cargar_archivo(archivo_seleccionado, ventana_entrada):
   if archivo:
     archivo_seleccionado.set(archivo)  
     try:
-      datos = leer_archivo(archivo_seleccionado.get(), ventana_entrada)
-      correrModelo(datos)
+      leer_archivo(archivo_seleccionado.get(), valorN_var, valorM_var, valorP, valorExt, valorCe, valorCij, valorCt_var, valorMaxM_var)
     except Exception as e:
       print(f"Error al leer el archivo: {e}")  
       raise 
@@ -66,7 +68,8 @@ def cargar_archivo(archivo_seleccionado, ventana_entrada):
       
   return None
 
-def leer_archivo(ruta_archivo,ventana_entrada):
+def leer_archivo(ruta_archivo, valorN_var, valorM_var, valorP, valorExt, valorCe, valorCij, valorCt_var, valorMaxM_var):
+  global n, m, p, ext, ce, c, ct, maxM
   try:
     with open(ruta_archivo, 'r', encoding='utf-8') as archivo:
       lineas = [linea.strip() for linea in archivo.readlines()]
@@ -88,22 +91,41 @@ def leer_archivo(ruta_archivo,ventana_entrada):
       numeros = linea.split(',')
       fila = [float(n) for n in numeros]
       c.append(fila)
-
-    print(ventana_entrada)
-    ventana_entrada.configure(state="normal")
-    ventana_entrada.delete('1.0', tk.END)
-    grupos = '\n'.join(str(sublista) for sublista in c)
-    # ventana_entrada.insert(tk.INSERT,"DATOS DE ENTRADA\n\nCantidad de grupos: " +str(primera_linea)+"\n\nEsfuerzo máximo: "+str(ultima_linea)+"\n\nGrupos de agentes:\n"+grupos)
-    ventana_entrada.insert(tk.INSERT,f"DATOS DE ENTRADA\n\nn = {n}\nm = {m}\np = {p}\next = {ext}\nce = {ce}\nc = {c}\nct = {ct}\nmaxM = {maxM}\n")
-    ventana_entrada.configure(state="disabled")
     
-    return [n, m, p, ext, ce,  c, ct, maxM]
+    valorN_var.set(str(n))
+    valorM_var.set(str(m))
+    valorCt_var.set(str(ct))
+    valorMaxM_var.set(str(maxM))
+    
+    valorP.config(state=tk.NORMAL)
+    valorP.delete('1.0', tk.END)
+    valorP.insert(tk.END, str(p)[1:-1])
+    valorP.config(state=tk.DISABLED)
+
+    valorExt.config(state=tk.NORMAL)
+    valorExt.delete('1.0', tk.END)
+    valorExt.insert(tk.END, str(ext)[1:-1])
+    valorExt.config(state=tk.DISABLED)
+    
+    valorCe.config(state=tk.NORMAL)
+    valorCe.delete('1.0', tk.END)
+    valorCe.insert(tk.END, str(ce)[1:-1])
+    valorCe.config(state=tk.DISABLED)
+
+    valorCij.config(state=tk.NORMAL)
+    valorCij.delete('1.0', tk.END)
+    for fila in c:
+        valorCij.insert(tk.END, str(fila)[1:-1] + '\n')
+    valorCij.config(state=tk.DISABLED)
+    
+    n, m, p, ext, ce, c, ct, maxM
 
   except Exception as e:
     print(f"Ocurrió un error: {e}")
     return None
   
-def correrModelo(datos):
+def correrModelo():
+  global n, m, p, ext, ce, c, ct, maxM
   # Configurar Gurobi automáticamente
   if not configurar_gurobi():
     print("No se puede ejecutar sin Gurobi")
@@ -122,21 +144,101 @@ def correrModelo(datos):
   
   try:
     instancia = minizinc.Instance(solver, modelo)
-    instancia["n"] = datos[0]
-    instancia["m"] = datos[1]
-    instancia["p"] = datos[2]
-    instancia["ext"] = datos[3]
-    instancia["ce"] = datos[4]
-    instancia["c"] = datos[5]
-    instancia["ct"] = datos[6]
-    instancia["maxM"] = datos[7]
-    
+    instancia["n"] = n
+    instancia["m"] = m
+    instancia["p"] = p
+    instancia["ext"] = ext
+    instancia["ce"] = ce
+    instancia["c"] = c
+    instancia["ct"] = ct
+    instancia["maxM"] = maxM
     resultado = instancia.solve()
-    print(resultado)
     return resultado
   except Exception as e:
     print(f"Error ejecutando el modelo con Gurobi: {e}")
     return None
   
+def resultado(ventana_resultado):  
+  try:
+    generarDZN()
+    solucion = correrModelo()
+    procesarSalida(str(solucion), ventana_resultado)
+  except Exception as e:
+    print(f"No se pudo solucionar el problema")  
+    raise 
+
+def generarDZN():
+  global n, m, p, ext, ce, c, ct, maxM
   
- 
+  try:
+    ruta_archivo = filedialog.asksaveasfilename(
+      defaultextension=".dzn",
+      filetypes=[("MiniZinc data", "*.dzn")],
+      title="Guardar archivo como"
+    )
+    
+    if not ruta_archivo:
+      print("Guardado cancelado por el usuario.")
+      return None
+    
+    aplanarCij = [num for fila in c for num in fila]
+    
+    with open(ruta_archivo, 'w') as file:
+      file.write(f"n = {n};\n")
+      file.write(f"m = {m};\n")
+      file.write(f"p = [{', '.join(map(str, p))}];\n")
+      file.write(f"ext = [{', '.join(map(str, ext))}];\n")
+      file.write(f"ce = [{', '.join(map(str, ce))}];\n")
+      file.write(f"c = array2d(1..{m}, 1..{m}, [{', '.join(map(str, aplanarCij))}]);\n")
+      file.write(f"ct = {ct};\n")
+      file.write(f"maxM = {maxM};\n")
+      
+    print(f"Archivo generado en: {os.path.abspath(ruta_archivo)}")  
+    return os.path.abspath(ruta_archivo)
+
+  except Exception as e:
+    print(f"Error al escribir archivo: {e}")  
+    raise 
+
+def procesarSalida(solucion, ventana_resultado):
+  
+  # Patrón para cada parte
+  patron_x = r"x=(\[\[.*?\]\])"
+  patron_extremismo = r"extremismo=([\d\.]+)"
+  patron_sol = r"sol=(\[[^\]]+\])"
+  patron_total_cost = r"total_cost=([\d\.]+)"
+  
+  # Buscar y procesar
+  x_text = re.search(patron_x, solucion).group(1)
+  extremismo_text = re.search(patron_extremismo, solucion).group(1)
+  sol_text = re.search(patron_sol, solucion).group(1)
+  total_cost_text = re.search(patron_total_cost, solucion).group(1)
+  
+  x = ast.literal_eval(x_text)
+  extremismo = float(extremismo_text)
+  sol = ast.literal_eval(sol_text)
+  total_cost = float(total_cost_text)  
+  textoX = "\n".join(" ".join(map(str, sublista)) for sublista in x)
+  
+  # resultado = f"Solución encontrada:\n\nValor de la Solución= {extremismo}\nSolución= {str(sol)[1:-1]}\nCosto total= {total_cost}\nCantidad de personas a cambiar de opinión=\n{textoX}\n" 
+  
+  # ventana_resultado.config(state=tk.NORMAL)
+  # ventana_resultado.delete('1.0', tk.END)
+  # ventana_resultado.insert(tk.END, resultado)
+  # ventana_resultado.config(state=tk.DISABLED)
+  
+  bold_font = font.Font(ventana_resultado, ventana_resultado.cget("font"))
+  bold_font.configure(weight="bold")
+  ventana_resultado.config(state=tk.NORMAL)
+  ventana_resultado.delete('1.0', tk.END)
+  ventana_resultado.tag_configure("negrita", font=bold_font)
+  ventana_resultado.insert(tk.END, "SOLUCIÓN ENCONTRADA\n\n", "negrita")
+  ventana_resultado.insert(tk.END, f"Valor de la Solución = ", "negrita")
+  ventana_resultado.insert(tk.END, f"{extremismo}\n")
+  ventana_resultado.insert(tk.END, "Solución = ", "negrita")
+  ventana_resultado.insert(tk.END, f"{str(sol)[1:-1]}\n")
+  ventana_resultado.insert(tk.END, "Costo total = ", "negrita")
+  ventana_resultado.insert(tk.END, f"{total_cost}\n")
+  ventana_resultado.insert(tk.END, "Cantidad de personas a cambiar de opinión =\n", "negrita")
+  ventana_resultado.insert(tk.END, f"{textoX}\n")
+  ventana_resultado.config(state=tk.DISABLED)
