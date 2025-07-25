@@ -218,7 +218,32 @@ def procesarSalida(solucion, ventana_resultado):
   extremismo = float(extremismo_text)
   sol = ast.literal_eval(sol_text)
   total_cost = float(total_cost_text)  
-  textoX = "\n".join(" ".join(map(str, sublista)) for sublista in x)
+  
+  # Crear tabla formateada con cabeceros
+  def crear_tabla_opiniones(matriz):
+    if not matriz:
+      return "No hay datos disponibles"
+    
+    num_opiniones = len(matriz)
+    
+    # Crear cabeceros de columnas
+    cabecero = "".ljust(12)  # Espacio para el cabecero de filas
+    for i in range(num_opiniones):
+      cabecero += f"Opinión {i+1}".ljust(12)
+    
+    tabla = cabecero + "\n"
+    tabla += "-" * len(cabecero) + "\n"
+    
+    # Crear filas de datos
+    for i, fila in enumerate(matriz):
+      fila_texto = f"Opinión {i+1}".ljust(12)
+      for valor in fila:
+        fila_texto += str(valor).ljust(12)
+      tabla += fila_texto + "\n"
+    
+    return tabla
+  
+  textoX = crear_tabla_opiniones(x)
   
   # resultado = f"Solución encontrada:\n\nValor de la Solución= {extremismo}\nSolución= {str(sol)[1:-1]}\nCosto total= {total_cost}\nCantidad de personas a cambiar de opinión=\n{textoX}\n" 
   
@@ -229,9 +254,15 @@ def procesarSalida(solucion, ventana_resultado):
   
   bold_font = font.Font(ventana_resultado, ventana_resultado.cget("font"))
   bold_font.configure(weight="bold")
+  
+  # Crear fuente monoespaciada para la tabla
+  mono_font = font.Font(ventana_resultado, family="Courier New", size=10)
+  
   ventana_resultado.config(state=tk.NORMAL)
   ventana_resultado.delete('1.0', tk.END)
   ventana_resultado.tag_configure("negrita", font=bold_font)
+  ventana_resultado.tag_configure("tabla", font=mono_font)
+  
   ventana_resultado.insert(tk.END, "SOLUCIÓN ENCONTRADA\n\n", "negrita")
   ventana_resultado.insert(tk.END, f"Valor de la Solución = ", "negrita")
   ventana_resultado.insert(tk.END, f"{extremismo}\n")
@@ -239,6 +270,6 @@ def procesarSalida(solucion, ventana_resultado):
   ventana_resultado.insert(tk.END, f"{str(sol)[1:-1]}\n")
   ventana_resultado.insert(tk.END, "Costo total = ", "negrita")
   ventana_resultado.insert(tk.END, f"{total_cost}\n")
-  ventana_resultado.insert(tk.END, "Cantidad de personas a cambiar de opinión =\n", "negrita")
-  ventana_resultado.insert(tk.END, f"{textoX}\n")
+  ventana_resultado.insert(tk.END, "Cantidad de personas a cambiar de opinión\n\n", "negrita")
+  ventana_resultado.insert(tk.END, f"{textoX}\n", "tabla")
   ventana_resultado.config(state=tk.DISABLED)
