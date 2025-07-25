@@ -227,18 +227,18 @@ def procesarSalida(solucion, ventana_resultado):
     num_opiniones = len(matriz)
     
     # Crear cabeceros de columnas
-    cabecero = "".ljust(12)  # Espacio para el cabecero de filas
+    cabecero = "".ljust(5)  
     for i in range(num_opiniones):
-      cabecero += f"Opinión {i+1}".ljust(12)
+      cabecero += f"Op {i+1}".ljust(6)
     
     tabla = cabecero + "\n"
     tabla += "-" * len(cabecero) + "\n"
     
     # Crear filas de datos
     for i, fila in enumerate(matriz):
-      fila_texto = f"Opinión {i+1}".ljust(12)
+      fila_texto = f"Op {i+1}".ljust(7)
       for valor in fila:
-        fila_texto += str(valor).ljust(12)
+        fila_texto += str(valor).ljust(6)
       tabla += fila_texto + "\n"
     
     return tabla
