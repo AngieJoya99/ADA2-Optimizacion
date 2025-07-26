@@ -1,10 +1,12 @@
 from tkinter import filedialog, font
 import tkinter as tk
+from unittest import result
 import minizinc
 import os
 import glob
 import re
 import ast
+import time
 
 global n, m, p, ext, ce, c, ct, maxM
 
@@ -143,6 +145,10 @@ def correrModelo():
     return None
   
   try:
+    tiempoInicial = time.time()
+
+    solver = minizinc.Solver.lookup("gecode")
+
     instancia = minizinc.Instance(solver, modelo)
     instancia["n"] = n
     instancia["m"] = m
@@ -153,7 +159,14 @@ def correrModelo():
     instancia["ct"] = ct
     instancia["maxM"] = maxM
     resultado = instancia.solve()
-    return resultado
+
+    print("Máxima profundidad:", resultado.statistics.get("peakDepth"))
+    print("Nodos fallidos:", resultado.statistics.get("failures"))
+    print("Nodos explorados:", resultado.statistics.get("nodes"))
+
+    tiempoFinal = time.time()
+    tiempo = round((tiempoFinal-tiempoInicial)*1000,2)
+    return resultado, tiempo
   except Exception as e:
     print(f"Error ejecutando el modelo con Gurobi: {e}")
     return None
@@ -161,8 +174,8 @@ def correrModelo():
 def resultado(ventana_resultado):  
   try:
     generarDZN()
-    solucion = correrModelo()
-    procesarSalida(str(solucion), ventana_resultado)
+    solucion, tiempo = correrModelo()
+    procesarSalida(str(solucion), ventana_resultado, tiempo)
   except Exception as e:
     print(f"No se pudo solucionar el problema")  
     raise 
@@ -200,8 +213,8 @@ def generarDZN():
     print(f"Error al escribir archivo: {e}")  
     raise 
 
-def procesarSalida(solucion, ventana_resultado):
-  
+def procesarSalida(solucion, ventana_resultado, tiempo):
+  global n, m, ct, maxM
   # Patrón para cada parte
   patron_x = r"x=(\[\[.*?\]\])"
   patron_extremismo = r"extremismo=([\d\.]+)"
@@ -262,14 +275,17 @@ def procesarSalida(solucion, ventana_resultado):
   ventana_resultado.delete('1.0', tk.END)
   ventana_resultado.tag_configure("negrita", font=bold_font)
   ventana_resultado.tag_configure("tabla", font=mono_font)
-  
-  ventana_resultado.insert(tk.END, "SOLUCIÓN ENCONTRADA\n\n", "negrita")
+
+  ventana_resultado.insert(tk.END, f"SOLUCIÓN ENCONTRADA en {tiempo} ms\n\n", "negrita")
   ventana_resultado.insert(tk.END, f"Valor de la Solución = ", "negrita")
   ventana_resultado.insert(tk.END, f"{extremismo}\n")
   ventana_resultado.insert(tk.END, "Solución = ", "negrita")
   ventana_resultado.insert(tk.END, f"{str(sol)[1:-1]}\n")
   ventana_resultado.insert(tk.END, "Costo total = ", "negrita")
   ventana_resultado.insert(tk.END, f"{total_cost}\n")
-  ventana_resultado.insert(tk.END, "Cantidad de personas a cambiar de opinión\n\n", "negrita")
+  totalX = sum(sum(sublista) for sublista in x)
+  ventana_resultado.insert(tk.END, f"Cantidad de personas a cambiar de opinión = {totalX}\n\n", "negrita")
   ventana_resultado.insert(tk.END, f"{textoX}\n", "tabla")
   ventana_resultado.config(state=tk.DISABLED)
+  
+  print(f"{n};{m};{ct};{maxM};{tiempo};{extremismo};{total_cost};{totalX}")
