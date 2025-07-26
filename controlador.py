@@ -159,17 +159,10 @@ def correrModelo():
     instancia["ct"] = ct
     instancia["maxM"] = maxM
     resultado = instancia.solve()
-    resultado2 = instancia.solve(async_mode=True)
-    
-    # Recolectar todas las soluciones y contar
-    soluciones = []
-    for result in resultado2:
-        soluciones.append(result)
 
-    print("Máxima profundidad:", resultado2.statistics.get("peakDepth"))
-    print("Número de soluciones:", len(soluciones))
-    print("Nodos fallidos:", resultado2.statistics.get("failures"))
-    print("Nodos explorados:", resultado2.statistics.get("nodes"))
+    print("Máxima profundidad:", resultado.statistics.get("peakDepth"))
+    print("Nodos fallidos:", resultado.statistics.get("failures"))
+    print("Nodos explorados:", resultado.statistics.get("nodes"))
 
     tiempoFinal = time.time()
     tiempo = round((tiempoFinal-tiempoInicial)*1000,2)
