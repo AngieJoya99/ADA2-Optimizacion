@@ -132,7 +132,13 @@ def correrModelo():
     return None
     
   modelo = model = minizinc.Model()
-  modelo.add_file("Modelo.mzn")
+  
+  ruta_actual = os.path.dirname(__file__)
+  ruta_modelo = os.path.abspath(os.path.join(ruta_actual, "..", "Proyecto.mzn"))
+  if not os.path.exists(ruta_modelo):
+    raise FileNotFoundError(f"No se encontró Proyecto.mzn en {ruta_modelo}")
+        
+  modelo.add_file(ruta_modelo)
   
   try:
     solver = minizinc.Solver.lookup("gurobi")
