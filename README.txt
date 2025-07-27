@@ -21,8 +21,8 @@ INSTRUCCIONES DE USO
 
 2. Existen dos formas de ejecutar la interfaz:
    - Abrir una terminal y ejecutar el comando:
-     python gui.py
-   - Usar un editor de código y correr el archivo gui.py (usualmente marcado con un símbolo de triángulo ▶).
+     python main.py
+   - Usar un editor de código y correr el archivo main.py (usualmente marcado con un símbolo de triángulo ▶).
 
 3. En la interfaz gráfica deberá:
    3.1 Presionar el botón "Cargar archivo", donde podrá cargar un archivo .txt desde el directorio DatosProyecto o MisInstancias.
